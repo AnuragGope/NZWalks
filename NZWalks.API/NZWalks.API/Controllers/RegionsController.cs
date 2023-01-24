@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NZWalks.API.Models.Domain;
 using NZWalks.API.Models.DTO;
@@ -24,22 +25,22 @@ namespace NZWalks.API.Controllers
         {
             var regions = await iregionRepository.getDataAsync();
             // return DTO regions
-/*            var regionsDTO = new List<Models.DTO.Region>();
-            regions.ToList().ForEach(region =>
-            {
-                var regionDTO = new Models.DTO.Region()
-                {
-                    id = region.id,
-                    Code = region.Code,
-                    Name = region.Name,
-                    Area = region.Area,
-                    Lat = region.Lat,
-                    Long = region.Long,
-                    Population = region.Population
-                };
+            /*            var regionsDTO = new List<Models.DTO.Region>();
+                        regions.ToList().ForEach(region =>
+                        {
+                            var regionDTO = new Models.DTO.Region()
+                            {
+                                id = region.id,
+                                Code = region.Code,
+                                Name = region.Name,
+                                Area = region.Area,
+                                Lat = region.Lat,
+                                Long = region.Long,
+                                Population = region.Population
+                            };
 
-                regionsDTO.Add(regionDTO);
-            });*/
+                            regionsDTO.Add(regionDTO);
+                        });*/
             var regionsDTO = mapper.Map<List<Models.DTO.Region>>(regions);
 
             return Ok(regionsDTO);
@@ -51,7 +52,7 @@ namespace NZWalks.API.Controllers
         public async Task<IActionResult> GetRegionAsync(Guid id)
         {
             var region = await iregionRepository.getAsync(id);
-            if(region == null)
+            if (region == null)
             {
                 return NotFound();
             }
@@ -62,8 +63,15 @@ namespace NZWalks.API.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> AddRegionAsync(AddRegionRequest addRegionRequest)
         {
+            // Validate the request
+/*            if (!ValidateAddRegionAsync(addRegionRequest))
+            {
+                return BadRequest(ModelState);
+            }*/
+
             // Request(DTO) to Domain Model
             var region = new Models.Domain.Region()
             {
@@ -77,7 +85,7 @@ namespace NZWalks.API.Controllers
 
             // Pass the details to Repo
             region = await iregionRepository.addAsync(region);
-             
+
             // Convert back to DTO
             var regionDTO = new Models.DTO.Region
             {
@@ -94,6 +102,7 @@ namespace NZWalks.API.Controllers
         }
 
         [HttpDelete]
+        [Authorize]
         [Route("{id:guid}")]
         public async Task<IActionResult> DeleteRegionAsync(Guid id)
         {
@@ -123,6 +132,7 @@ namespace NZWalks.API.Controllers
 
         [HttpPut]
         [Route("{id:guid}")]
+        [Authorize]
         public async Task<IActionResult> UpdateRegionAsync([FromRoute] Guid id, [FromBody] Models.DTO.UpdateRegionRequest updateRegionRequest)
         {
             // Convert DTO to Domain model
@@ -139,7 +149,7 @@ namespace NZWalks.API.Controllers
             region = await iregionRepository.updateAsync(id, region);
 
             // If Null then not found
-            if(region == null)
+            if (region == null)
             {
                 return NotFound();
             }
@@ -157,5 +167,30 @@ namespace NZWalks.API.Controllers
             // Return Ok response
             return Ok(regionDTO);
         }
+
+        #region Private Methods
+        private bool ValidateAddRegionAsync(AddRegionRequest addRegionRequest)
+        {
+            if (string.IsNullOrWhiteSpace(addRegionRequest.Code))
+            {
+                ModelState.AddModelError(nameof(addRegionRequest.Code),
+                    $"{nameof(addRegionRequest.Code)} cannot be null or empty or whitespace");
+            }
+
+            if (string.IsNullOrWhiteSpace(addRegionRequest.Name))
+            {
+                ModelState.AddModelError(nameof(addRegionRequest.Name),
+                    $"{nameof(addRegionRequest.Name)} cannot be null or empty or whitespace");
+            }
+
+            if (ModelState.ErrorCount > 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        #endregion
     }
 }
